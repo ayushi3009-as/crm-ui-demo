@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Facebook, Instagram, TrendingUp, DollarSign, Users, Target, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, Target, ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
+import { FaFacebook, FaInstagram } from 'react-icons/fa';
 
 export default function MetaAdsPage() {
   return (
@@ -12,7 +13,7 @@ export default function MetaAdsPage() {
           <p className="text-gray-500 mt-1">Monitor your Facebook and Instagram campaign performance</p>
         </div>
         <button className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-blue-500/30 hover:scale-105 transition-all duration-300 flex items-center gap-2">
-          <Facebook className="w-4 h-4" /> Connect Account
+          <FaFacebook className="w-4 h-4" /> Connect Account
         </button>
       </div>
 
@@ -83,7 +84,7 @@ function CampaignRow({ name, platform, spend, leads }) {
     <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-          {platform === 'facebook' ? <Facebook className="w-4 h-4 text-blue-600" /> : <Instagram className="w-4 h-4 text-pink-600" />}
+          {platform === 'facebook' ? <FaFacebook className="w-4 h-4 text-blue-600" /> : <FaInstagram className="w-4 h-4 text-pink-600" />}
         </div>
         <div>
           <h5 className="font-semibold text-gray-800 text-sm">{name}</h5>
