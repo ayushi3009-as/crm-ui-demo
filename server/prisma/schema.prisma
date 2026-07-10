@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  SALES
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  EMAIL
+  MEETING
+  STATUS_CHANGE
+  ASSIGNMENT
+  IMPORT
+}
+
+enum ImportStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        Role     @default(SALES)
+  phone       String?
+  avatar      String?
+  isActive        Boolean        @default(true) @map("is_active")
+  approvalStatus  ApprovalStatus @default(PENDING) @map("approval_status")
+  paymentScreenshot String?      @map("payment_screenshot")
+  selectedPlan    String?        @map("selected_plan")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  assignedLeads   Lead[]     @relation("AssignedTo")
+  createdLeads    Lead[]     @relation("CreatedBy")
+  activities      Activity[]
+  createdCustomers Customer[] @relation("CustomerCreatedBy")
+  importLogs      ImportLog[]
+  passwordResets  PasswordResetToken[]
+
+  @@map("users")
+}
+
+model LeadSource {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  icon      String?
+  color     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  leads Lead[]
+
+  @@map("lead_sources")
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  fullName    String     @map("full_name")
+  email       String?
+  phone       String?
+  companyName String?    @map("company_name")
+  sourceId    String?    @map("source_id")
+  status      LeadStatus @default(NEW)
+  leadScore   Int        @default(0) @map("lead_score")
+  description String?
+  city        String?
+  interest    String?
+  assignedToId String?   @map("assigned_to_id")
+  createdById  String?   @map("created_by_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  source     LeadSource? @relation(fields: [sourceId], references: [id])
+  assignedTo User?       @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy  User?       @relation("CreatedBy", fields: [createdById], references: [id])
+  activities Activity[]
+  customer   Customer?   @relation("ConvertedFromLead")
+
+  @@map("leads")
+}
+
+model Customer {
+  id               String   @id @default(uuid())
+  fullName         String   @map("full_name")
+  email            String?
+  phone            String?
+  companyName      String?  @map("company_name")
+  city             String?
+  address          String?
+  notes            String?
+  convertedFromLeadId String? @unique @map("converted_from_lead_id")
+  createdById      String?  @map("created_by_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  convertedFromLead Lead?   @relation("ConvertedFromLead", fields: [convertedFromLeadId], references: [id])
+  createdBy         User?   @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+
+  @@map("customers")
+}
+
+model Activity {
+  id          String       @id @default(uuid())
+  leadId      String?      @map("lead_id")
+  userId      String?      @map("user_id")
+  type        ActivityType
+  title       String
+  description String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("activities")
+}
+
+model ImportLog {
+  id             String       @id @default(uuid())
+  fileName       String       @map("file_name")
+  totalRows      Int          @default(0) @map("total_rows")
+  successCount   Int          @default(0) @map("success_count")
+  duplicateCount Int          @default(0) @map("duplicate_count")
+  failedCount    Int          @default(0) @map("failed_count")
+  status         ImportStatus @default(PROCESSING)
+  importedById   String?      @map("imported_by_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  importedBy User? @relation(fields: [importedById], references: [id])
+
+  @@map("import_logs")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("password_reset_tokens")
+}
+
+model CompanySettings {
+  id             String   @id @default(uuid())
+  companyName    String?  @map("company_name")
+  companyEmail   String?  @map("company_email")
+  companyPhone   String?  @map("company_phone")
+  companyAddress String?  @map("company_address")
+  companyLogo    String?  @map("company_logo")
+  companyWebsite String?  @map("company_website")
+  timezone       String?  @default("Asia/Kolkata")
+  dateFormat     String?  @default("DD/MM/YYYY") @map("date_format")
+  currency       String?  @default("INR")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("company_settings")
+}
