@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { HiOutlineCheck, HiOutlineX, HiOutlinePhoto, HiOutlineArrowPath } from 'react-icons/hi2';
+import { HiOutlineCheck, HiOutlineXMark, HiOutlinePhoto, HiOutlineArrowPath } from 'react-icons/hi2';
 import { useRouter } from 'next/navigation';
 
 export default function SuperadminPage() {
@@ -147,7 +147,7 @@ export default function SuperadminPage() {
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                         title="Reject Account"
                       >
-                        <HiOutlineX className="w-5 h-5" />
+                        <HiOutlineXMark className="w-5 h-5" />
                       </button>
                     </div>
                   </td>
