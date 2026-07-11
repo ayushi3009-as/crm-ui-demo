@@ -4,13 +4,14 @@ import {
   HiOutlineUsers, HiOutlineUserPlus, HiOutlineEnvelope, 
   HiOutlineCheckCircle, HiOutlineFunnel, HiOutlineArrowDownTray,
   HiOutlineArrowUpTray, HiOutlinePlus, HiOutlineAdjustmentsHorizontal,
-  HiOutlineMagnifyingGlass
+  HiOutlineMagnifyingGlass, HiOutlinePencilSquare
 } from 'react-icons/hi2';
 import StatCard from '@/components/dashboard/StatCard';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import AddLeadModal from '@/components/leads/AddLeadModal';
 import ImportLeadsModal from '@/components/leads/ImportLeadsModal';
+import EditLeadModal from '@/components/leads/EditLeadModal';
 
 export default function LeadsPage() {
   const { user } = useAuth();
@@ -21,11 +22,13 @@ export default function LeadsPage() {
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [editLead, setEditLead] = useState(null);
 
   // Filters
   const [activeTab, setActiveTab] = useState('All Leads');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState('all_time');
 
   // Stats calculation
   const totalLeads = leads.length;
@@ -35,6 +38,15 @@ export default function LeadsPage() {
   const wonLeads = leads.filter(l => l.status === 'WON').length;
 
   const tabs = ['All Leads', 'My Leads', 'New Leads', 'Qualified'];
+  const dateOptions = [
+    { value: 'all_time', label: 'All Time' },
+    { value: 'today', label: 'Today' },
+    { value: 'this_week', label: 'This Week' },
+    { value: 'this_month', label: 'This Month' },
+    { value: 'this_year', label: 'This Year' },
+    { value: 'past_6_months', label: 'Past 6 Months' },
+    { value: 'past_2_years', label: 'Past 2 Years' }
+  ];
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -50,6 +62,7 @@ export default function LeadsPage() {
       
       let queryParams = new URLSearchParams();
       if (debouncedSearch) queryParams.append('search', debouncedSearch);
+      if (dateFilter && dateFilter !== 'all_time') queryParams.append('dateFilter', dateFilter);
       
       if (activeTab === 'My Leads' && user?.id) {
         queryParams.append('assignedToId', user.id);
@@ -79,7 +92,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetchLeads();
-  }, [activeTab, debouncedSearch, user?.id]);
+  }, [activeTab, debouncedSearch, user?.id, dateFilter]);
 
   const handleExport = () => {
     if (!leads.length) return;
@@ -133,8 +146,9 @@ export default function LeadsPage() {
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10 relative">
       
       {/* Modals */}
-      <AddLeadModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchLeads} />
+      <AddLeadModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchLeads} defaultAssignee={activeTab === 'My Leads' ? user?.id : null} />
       <ImportLeadsModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} onSuccess={fetchLeads} />
+      <EditLeadModal isOpen={!!editLead} lead={editLead} onClose={() => setEditLead(null)} onSuccess={fetchLeads} />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -202,8 +216,14 @@ export default function LeadsPage() {
           </div>
           {/* Filters */}
           <div className="flex items-center gap-3 pb-3 xl:pb-0">
-            <select className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 font-medium">
-              <option>This Month</option>
+            <select 
+              value={dateFilter} 
+              onChange={e => setDateFilter(e.target.value)}
+              className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 font-medium"
+            >
+              {dateOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors">
               <HiOutlineAdjustmentsHorizontal className="w-4 h-4" /> Filter
@@ -293,7 +313,9 @@ export default function LeadsPage() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2 text-slate-400">
                         <button className="hover:text-blue-600"><HiOutlineMagnifyingGlass className="w-4 h-4" /></button>
-                        <button className="hover:text-blue-600">✏️</button>
+                        <button onClick={() => setEditLead(lead)} className="hover:text-blue-600 p-1 rounded hover:bg-blue-50 transition-colors">
+                          <HiOutlinePencilSquare className="w-4 h-4" />
+                        </button>
                         <button className="hover:text-blue-600">⋮</button>
                       </div>
                     </td>

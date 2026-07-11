@@ -7,6 +7,7 @@ export const getLeads = async (req, res, next) => {
       status,
       sourceId,
       assignedToId,
+      dateFilter,
       sortBy = 'createdAt',
       sortOrder = 'desc',
       page = 1,
@@ -38,6 +39,25 @@ export const getLeads = async (req, res, next) => {
 
     if (assignedToId) {
       where.assignedToId = assignedToId;
+    }
+
+    if (dateFilter) {
+      const now = new Date();
+      if (dateFilter === 'today') {
+        where.createdAt = { gte: new Date(now.setHours(0,0,0,0)) };
+      } else if (dateFilter === 'this_week') {
+        const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
+        firstDay.setHours(0,0,0,0);
+        where.createdAt = { gte: firstDay };
+      } else if (dateFilter === 'this_month') {
+        where.createdAt = { gte: new Date(now.getFullYear(), now.getMonth(), 1) };
+      } else if (dateFilter === 'this_year') {
+        where.createdAt = { gte: new Date(now.getFullYear(), 0, 1) };
+      } else if (dateFilter === 'past_6_months') {
+        where.createdAt = { gte: new Date(now.setMonth(now.getMonth() - 6)) };
+      } else if (dateFilter === 'past_2_years') {
+        where.createdAt = { gte: new Date(now.setFullYear(now.getFullYear() - 2)) };
+      }
     }
 
     const [leads, total] = await Promise.all([

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { HiXMark } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 
-export default function AddLeadModal({ isOpen, onClose, onSuccess }) {
+export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssignee }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -13,31 +13,39 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }) {
     status: 'NEW',
     leadScore: 0,
     city: '',
-    interest: ''
+    interest: '',
+    assignedToId: defaultAssignee || ''
   });
   const [sources, setSources] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      // Fetch sources for dropdown
-      const fetchSources = async () => {
+      if (defaultAssignee) {
+        setFormData(prev => ({ ...prev, assignedToId: defaultAssignee }));
+      }
+      
+      const fetchData = async () => {
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:5000/api/sources', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const data = await res.json();
-          if (data.success) {
-            setSources(data.data);
-          }
+          const [sourcesRes, usersRes] = await Promise.all([
+            fetch('http://localhost:5000/api/sources', { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('http://localhost:5000/api/users', { headers: { 'Authorization': `Bearer ${token}` } })
+          ]);
+          
+          const sourcesData = await sourcesRes.json();
+          if (sourcesData.success) setSources(sourcesData.data);
+          
+          const usersData = await usersRes.json();
+          if (usersData.success) setUsers(usersData.data);
         } catch (err) {
-          console.error('Failed to fetch sources', err);
+          console.error('Failed to fetch data', err);
         }
       };
-      fetchSources();
+      fetchData();
     }
-  }, [isOpen]);
+  }, [isOpen, defaultAssignee]);
 
   if (!isOpen) return null;
 
@@ -62,7 +70,7 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }) {
       const data = await res.json();
       if (data.success) {
         toast.success('Lead created successfully!');
-        setFormData({ fullName: '', email: '', phone: '', companyName: '', sourceId: '', status: 'NEW', leadScore: 0, city: '', interest: '' });
+        setFormData({ fullName: '', email: '', phone: '', companyName: '', sourceId: '', status: 'NEW', leadScore: 0, city: '', interest: '', assignedToId: defaultAssignee || '' });
         onSuccess();
         onClose();
       } else {
@@ -123,6 +131,16 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }) {
                 </select>
               </div>
               
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Assigned To</label>
+                <select value={formData.assignedToId} onChange={e => setFormData({...formData, assignedToId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
+                  <option value="">Unassigned</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Lead Score (0-100)</label>
                 <input type="number" min="0" max="100" value={formData.leadScore} onChange={e => setFormData({...formData, leadScore: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" />
