@@ -22,7 +22,7 @@ async function main() {
   console.log(`Created superadmin with email: ${superadmin.email}`);
 
   // 2. Create Default Lead Sources
-  const sources = [
+  const initialSources = [
     { name: 'Website', color: '#3B82F6', icon: 'Globe' },
     { name: 'Meta Ads', color: '#1877F2', icon: 'Facebook' },
     { name: 'Google Ads', color: '#EA4335', icon: 'Google' },

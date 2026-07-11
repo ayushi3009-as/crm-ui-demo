@@ -2,15 +2,17 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ company: '', name: '', email: '', password: '', terms: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!formData.terms) {
       setError('You must agree to the Terms of Service.');
       return;
@@ -32,8 +34,7 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('token', data.data.token);
-        router.push('/payment');
+        login(data.data.user, data.data.token);
       } else {
         let errorMessage = data.message || 'Registration failed.';
         if (data.errors && data.errors.length > 0) {

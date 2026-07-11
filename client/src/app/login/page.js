@@ -2,16 +2,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setLoading(true);
     setError('');
     setIsPending(false);
@@ -25,12 +27,7 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (data.success) {
-        localStorage.setItem('token', data.data.token);
-        if (data.data.user.role === 'SUPERADMIN') {
-          router.push('/superadmin');
-        } else {
-          router.push('/dashboard');
-        }
+        login(data.data.user, data.data.token);
       } else {
         setError(data.message || 'Login failed.');
         if (data.isPending) {
