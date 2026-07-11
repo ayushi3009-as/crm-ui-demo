@@ -14,7 +14,9 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssign
     leadScore: 0,
     city: '',
     interest: '',
-    assignedToId: defaultAssignee || ''
+    assignedToId: defaultAssignee || '',
+    sourceName: '',
+    assignedToName: ''
   });
   const [sources, setSources] = useState([]);
   const [users, setUsers] = useState([]);
@@ -24,6 +26,11 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssign
     if (isOpen) {
       if (defaultAssignee) {
         setFormData(prev => ({ ...prev, assignedToId: defaultAssignee }));
+        // Try to find the user name for the default assignee
+        if (users.length > 0) {
+          const u = users.find(u => u.id === defaultAssignee);
+          if (u) setFormData(prev => ({ ...prev, assignedToName: u.name }));
+        }
       }
       
       const fetchData = async () => {
@@ -38,7 +45,13 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssign
           if (sourcesData.success) setSources(sourcesData.data);
           
           const usersData = await usersRes.json();
-          if (usersData.success) setUsers(usersData.data);
+          if (usersData.success) {
+            setUsers(usersData.data);
+            if (defaultAssignee) {
+              const u = usersData.data.find(user => user.id === defaultAssignee);
+              if (u) setFormData(prev => ({ ...prev, assignedToName: u.name }));
+            }
+          }
         } catch (err) {
           console.error('Failed to fetch data', err);
         }
@@ -55,22 +68,36 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssign
 
     try {
       const token = localStorage.getItem('token');
+      // Resolve typed names to IDs or send as new names
+      const payload = { ...formData, leadScore: parseInt(formData.leadScore) };
+      
+      const matchedSource = sources.find(s => s.name.toLowerCase() === formData.sourceName.toLowerCase());
+      if (matchedSource) {
+        payload.sourceId = matchedSource.id;
+      } else if (formData.sourceName) {
+        payload.newSourceName = formData.sourceName;
+      }
+
+      const matchedUser = users.find(u => u.name.toLowerCase() === formData.assignedToName.toLowerCase());
+      if (matchedUser) {
+        payload.assignedToId = matchedUser.id;
+      } else if (formData.assignedToName) {
+        payload.newAssignedToName = formData.assignedToName;
+      }
+
       const res = await fetch('http://localhost:5000/api/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          leadScore: parseInt(formData.leadScore)
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
       if (data.success) {
         toast.success('Lead created successfully!');
-        setFormData({ fullName: '', email: '', phone: '', companyName: '', sourceId: '', status: 'NEW', leadScore: 0, city: '', interest: '', assignedToId: defaultAssignee || '' });
+        setFormData({ fullName: '', email: '', phone: '', companyName: '', sourceId: '', status: 'NEW', leadScore: 0, city: '', interest: '', assignedToId: defaultAssignee || '', sourceName: '', assignedToName: '' });
         onSuccess();
         onClose();
       } else {
@@ -123,22 +150,34 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssign
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Lead Source</label>
-                <select value={formData.sourceId} onChange={e => setFormData({...formData, sourceId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
-                  <option value="">Select a source...</option>
+                <input 
+                  list="source-options" 
+                  value={formData.sourceName} 
+                  onChange={e => setFormData({...formData, sourceName: e.target.value})} 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
+                  placeholder="Type or select a source..." 
+                />
+                <datalist id="source-options">
                   {sources.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
+                    <option key={s.id} value={s.name} />
                   ))}
-                </select>
+                </datalist>
               </div>
               
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Assigned To</label>
-                <select value={formData.assignedToId} onChange={e => setFormData({...formData, assignedToId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
-                  <option value="">Unassigned</option>
+                <input 
+                  list="user-options" 
+                  value={formData.assignedToName} 
+                  onChange={e => setFormData({...formData, assignedToName: e.target.value})} 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" 
+                  placeholder="Type or select a user..." 
+                />
+                <datalist id="user-options">
                   {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+                    <option key={u.id} value={u.name} />
                   ))}
-                </select>
+                </datalist>
               </div>
 
               <div>

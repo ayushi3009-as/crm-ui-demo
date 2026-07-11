@@ -164,7 +164,36 @@ export const createLead = async (req, res, next) => {
       city,
       interest,
       assignedToId,
+      newSourceName,
+      newAssignedToName
     } = req.body;
+
+    let finalSourceId = sourceId;
+    if (newSourceName) {
+      let source = await prisma.leadSource.findFirst({ where: { name: newSourceName } });
+      if (!source) {
+        source = await prisma.leadSource.create({
+          data: { name: newSourceName }
+        });
+      }
+      finalSourceId = source.id;
+    }
+
+    let finalAssignedToId = assignedToId;
+    if (newAssignedToName) {
+      let user = await prisma.user.findFirst({ where: { name: newAssignedToName } });
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            name: newAssignedToName,
+            email: `dummy_${Date.now()}@tivra.crm`,
+            password: 'dummy_password', // Temporary password
+            role: 'SALES'
+          }
+        });
+      }
+      finalAssignedToId = user.id;
+    }
 
     const lead = await prisma.lead.create({
       data: {
@@ -172,13 +201,13 @@ export const createLead = async (req, res, next) => {
         email,
         phone,
         companyName,
-        sourceId,
+        sourceId: finalSourceId,
         status: status || 'NEW',
         leadScore: leadScore || 0,
         description,
         city,
         interest,
-        assignedToId,
+        assignedToId: finalAssignedToId,
         createdById: req.user.id,
       },
       include: {
