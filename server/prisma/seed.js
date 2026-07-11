@@ -95,6 +95,7 @@ async function main() {
       password: hashedPassword,
       role: 'ADMIN',
       phone: '+91 9876543210',
+      approvalStatus: 'APPROVED'
     },
   });
 
@@ -105,6 +106,7 @@ async function main() {
       password: salesPassword,
       role: 'SALES',
       phone: '+91 9876543211',
+      approvalStatus: 'APPROVED'
     },
   });
 
@@ -115,6 +117,7 @@ async function main() {
       password: salesPassword,
       role: 'SALES',
       phone: '+91 9876543212',
+      approvalStatus: 'APPROVED'
     },
   });
 
