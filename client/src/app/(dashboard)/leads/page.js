@@ -8,12 +8,25 @@ import {
 } from 'react-icons/hi2';
 import StatCard from '@/components/dashboard/StatCard';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
+import AddLeadModal from '@/components/leads/AddLeadModal';
+import ImportLeadsModal from '@/components/leads/ImportLeadsModal';
 
 export default function LeadsPage() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
+  // Modals
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // Filters
+  const [activeTab, setActiveTab] = useState('All Leads');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   // Stats calculation
   const totalLeads = leads.length;
   const newLeads = leads.filter(l => l.status === 'NEW').length;
@@ -21,30 +34,81 @@ export default function LeadsPage() {
   const qualifiedLeads = leads.filter(l => l.status === 'QUALIFIED').length;
   const wonLeads = leads.filter(l => l.status === 'WON').length;
 
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/leads', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await res.json();
-        if (data.success) {
-          setLeads(data.data.leads);
-        } else {
-          setError(data.message || 'Failed to fetch leads');
-        }
-      } catch (err) {
-        setError('Network error while fetching leads');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const tabs = ['All Leads', 'My Leads', 'New Leads', 'Qualified'];
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchLeads = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      let queryParams = new URLSearchParams();
+      if (debouncedSearch) queryParams.append('search', debouncedSearch);
+      
+      if (activeTab === 'My Leads' && user?.id) {
+        queryParams.append('assignedToId', user.id);
+      } else if (activeTab === 'New Leads') {
+        queryParams.append('status', 'NEW');
+      } else if (activeTab === 'Qualified') {
+        queryParams.append('status', 'QUALIFIED');
+      }
+      
+      const res = await fetch(`http://localhost:5000/api/leads?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLeads(data.data.leads);
+      } else {
+        setError(data.message || 'Failed to fetch leads');
+      }
+    } catch (err) {
+      setError('Network error while fetching leads');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [activeTab, debouncedSearch, user?.id]);
+
+  const handleExport = () => {
+    if (!leads.length) return;
+    
+    // Convert current leads state to CSV
+    const headers = ['Lead Name', 'Company', 'Email', 'Phone', 'Source', 'Score', 'Status', 'Assigned To', 'Created At'];
+    const csvRows = leads.map(lead => [
+      `"${lead.fullName || ''}"`,
+      `"${lead.companyName || ''}"`,
+      `"${lead.email || ''}"`,
+      `"${lead.phone || ''}"`,
+      `"${lead.source?.name || ''}"`,
+      lead.leadScore,
+      `"${lead.status}"`,
+      `"${lead.assignedTo?.name || 'Unassigned'}"`,
+      `"${new Date(lead.createdAt).toISOString()}"`
+    ]);
+    
+    const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tivra_leads_export_${new Date().getTime()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -66,8 +130,12 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-10 relative">
       
+      {/* Modals */}
+      <AddLeadModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchLeads} />
+      <ImportLeadsModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} onSuccess={fetchLeads} />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
@@ -80,13 +148,13 @@ export default function LeadsPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
+          <button onClick={() => setIsImportOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
             <HiOutlineArrowDownTray className="w-4 h-4" /> Import Leads
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
+          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
             <HiOutlineArrowUpTray className="w-4 h-4" /> Export Leads
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
+          <button onClick={() => setIsAddOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
             <HiOutlinePlus className="w-4 h-4" /> Add Lead
           </button>
         </div>
@@ -117,13 +185,17 @@ export default function LeadsPage() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[400px]">
         {/* Tabs & Filters */}
         <div className="px-5 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4 pt-2">
           {/* Tabs */}
           <div className="flex gap-6 overflow-x-auto hide-scrollbar">
-            {['All Leads', 'My Leads', 'Unassigned', 'Follow Ups', 'Hot Leads'].map((tab, i) => (
-              <button key={i} className={`whitespace-nowrap pb-3 pt-2 text-sm font-semibold border-b-2 transition-colors ${i === 0 ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+            {tabs.map((tab, i) => (
+              <button 
+                key={i} 
+                onClick={() => setActiveTab(tab)}
+                className={`whitespace-nowrap pb-3 pt-2 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              >
                 {tab}
               </button>
             ))}
@@ -138,7 +210,13 @@ export default function LeadsPage() {
             </button>
             <div className="relative">
               <HiOutlineMagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" placeholder="Search leads..." className="text-xs border border-slate-200 rounded-lg pl-9 pr-3 py-2 outline-none focus:border-blue-500 w-48" />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search leads..." 
+                className="text-xs border border-slate-200 rounded-lg pl-9 pr-3 py-2 outline-none focus:border-blue-500 w-48" 
+              />
             </div>
           </div>
         </div>
@@ -228,7 +306,7 @@ export default function LeadsPage() {
         
         {/* Pagination */}
         {!loading && leads.length > 0 && (
-          <div className="p-4 border-t border-slate-200 flex items-center justify-between">
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between mt-auto">
             <span className="text-xs text-slate-500">Showing 1 to {leads.length} of {leads.length} leads</span>
             <div className="flex items-center gap-2">
               <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 text-sm">&lt;</button>
