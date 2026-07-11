@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { 
   HiOutlineUsers, HiOutlineUserPlus, HiOutlineEnvelope, 
   HiOutlineCheckCircle, HiOutlineFunnel, HiOutlineArrowDownTray,
@@ -6,18 +7,64 @@ import {
   HiOutlineMagnifyingGlass
 } from 'react-icons/hi2';
 import StatCard from '@/components/dashboard/StatCard';
-
-const leadsData = [
-  { id: 1, name: 'Rahul Sharma', company: 'Tech Solutions Pvt. Ltd.', phone: '+91 98765 43210', email: 'rahul.sharma@email.com', source: 'Google Ads', sourceColor: 'text-blue-500', score: 85, scoreColor: 'text-emerald-500', status: 'New', statusColor: 'bg-blue-50 text-blue-600', assigned: 'Vikash Kumar', time: '2 min ago', avatar: 'https://i.pravatar.cc/150?u=1', assigneeAvatar: 'https://i.pravatar.cc/150?u=a1' },
-  { id: 2, name: 'Priya Singh', company: 'NextGen Marketing', phone: '+91 87654 32109', email: 'priya.singh@email.com', source: 'Meta Ads', sourceColor: 'text-blue-600', score: 72, scoreColor: 'text-orange-500', status: 'Contacted', statusColor: 'bg-orange-50 text-orange-600', assigned: 'Anam Verma', time: '10 min ago', avatar: 'https://i.pravatar.cc/150?u=2', assigneeAvatar: 'https://i.pravatar.cc/150?u=a2' },
-  { id: 3, name: 'Vikash Kumar', company: 'Bright Future Ltd.', phone: '+91 76543 21098', email: 'vikash.kumar@email.com', source: 'Website Form', sourceColor: 'text-indigo-500', score: 92, scoreColor: 'text-emerald-500', status: 'Qualified', statusColor: 'bg-emerald-50 text-emerald-600', assigned: 'Rahul Sharma', time: '30 min ago', avatar: 'https://i.pravatar.cc/150?u=3', assigneeAvatar: 'https://i.pravatar.cc/150?u=a3' },
-  { id: 4, name: 'Anam Shaikh', company: 'Creative Agency', phone: '+91 65432 10987', email: 'anam.shaikh@email.com', source: 'WhatsApp', sourceColor: 'text-green-500', score: 68, scoreColor: 'text-orange-500', status: 'Proposal', statusColor: 'bg-purple-50 text-purple-600', assigned: 'Priya Singh', time: '1 hour ago', avatar: 'https://i.pravatar.cc/150?u=4', assigneeAvatar: 'https://i.pravatar.cc/150?u=a4' },
-  { id: 5, name: 'Aman Mishra', company: 'Digital World', phone: '+91 54321 09876', email: 'aman.mishra@email.com', source: 'Referral', sourceColor: 'text-cyan-500', score: 78, scoreColor: 'text-emerald-500', status: 'Negotiation', statusColor: 'bg-blue-50 text-blue-700', assigned: 'Vikash Kumar', time: '2 hours ago', avatar: 'https://i.pravatar.cc/150?u=5', assigneeAvatar: 'https://i.pravatar.cc/150?u=a5' },
-  { id: 6, name: 'Neha Verma', company: 'Verma Enterprises', phone: '+91 43210 98765', email: 'neha.verma@email.com', source: 'Email Campaign', sourceColor: 'text-red-500', score: 95, scoreColor: 'text-emerald-500', status: 'Won', statusColor: 'bg-green-50 text-green-700', assigned: 'Anam Verma', time: '3 hours ago', avatar: 'https://i.pravatar.cc/150?u=6', assigneeAvatar: 'https://i.pravatar.cc/150?u=a6' },
-  { id: 7, name: 'Rohit Soni', company: 'R.S. Industries', phone: '+91 32109 87654', email: 'rohit.soni@email.com', source: 'SMS Campaign', sourceColor: 'text-green-600', score: 35, scoreColor: 'text-red-500', status: 'Lost', statusColor: 'bg-red-50 text-red-600', assigned: 'Priya Singh', time: '5 hours ago', avatar: 'https://i.pravatar.cc/150?u=7', assigneeAvatar: 'https://i.pravatar.cc/150?u=a7' },
-];
+import { formatDistanceToNow } from 'date-fns';
 
 export default function LeadsPage() {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  // Stats calculation
+  const totalLeads = leads.length;
+  const newLeads = leads.filter(l => l.status === 'NEW').length;
+  const contactedLeads = leads.filter(l => l.status === 'CONTACTED').length;
+  const qualifiedLeads = leads.filter(l => l.status === 'QUALIFIED').length;
+  const wonLeads = leads.filter(l => l.status === 'WON').length;
+
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5000/api/leads', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          setLeads(data.data.leads);
+        } else {
+          setError(data.message || 'Failed to fetch leads');
+        }
+      } catch (err) {
+        setError('Network error while fetching leads');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+  }, []);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'NEW': return 'bg-blue-50 text-blue-600';
+      case 'CONTACTED': return 'bg-orange-50 text-orange-600';
+      case 'QUALIFIED': return 'bg-emerald-50 text-emerald-600';
+      case 'PROPOSAL': return 'bg-purple-50 text-purple-600';
+      case 'NEGOTIATION': return 'bg-yellow-50 text-yellow-700';
+      case 'WON': return 'bg-green-50 text-green-700';
+      case 'LOST': return 'bg-red-50 text-red-600';
+      default: return 'bg-slate-50 text-slate-600';
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'text-emerald-500';
+    if (score >= 50) return 'text-orange-500';
+    return 'text-red-500';
+  };
+
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       
@@ -48,23 +95,23 @@ export default function LeadsPage() {
       {/* Top Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard 
-          title="Total Leads" value="25,689" change="18.6%" changeType="increase" 
+          title="Total Leads" value={totalLeads.toString()} change="+" changeType="increase" 
           icon={HiOutlineUsers} iconBg="bg-blue-100" iconColor="text-blue-600" 
         />
         <StatCard 
-          title="New Leads" value="3,987" change="16.3%" changeType="increase" 
+          title="New Leads" value={newLeads.toString()} change="+" changeType="increase" 
           icon={HiOutlineUserPlus} iconBg="bg-emerald-100" iconColor="text-emerald-600" 
         />
         <StatCard 
-          title="Contacted" value="2,743" change="22.7%" changeType="increase" 
+          title="Contacted" value={contactedLeads.toString()} change="+" changeType="increase" 
           icon={HiOutlineEnvelope} iconBg="bg-blue-100" iconColor="text-blue-600" 
         />
         <StatCard 
-          title="Qualified" value="1,824" change="8.3%" changeType="increase" 
+          title="Qualified" value={qualifiedLeads.toString()} change="+" changeType="increase" 
           icon={HiOutlineCheckCircle} iconBg="bg-orange-100" iconColor="text-orange-600" 
         />
         <StatCard 
-          title="Converted" value="932" change="28.4%" changeType="increase" 
+          title="Converted" value={wonLeads.toString()} change="+" changeType="increase" 
           icon={HiOutlineFunnel} iconBg="bg-teal-100" iconColor="text-teal-600" 
         />
       </div>
@@ -89,9 +136,6 @@ export default function LeadsPage() {
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors">
               <HiOutlineAdjustmentsHorizontal className="w-4 h-4" /> Filter
             </button>
-            <select className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 font-medium">
-              <option>Segment</option>
-            </select>
             <div className="relative">
               <HiOutlineMagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input type="text" placeholder="Search leads..." className="text-xs border border-slate-200 rounded-lg pl-9 pr-3 py-2 outline-none focus:border-blue-500 w-48" />
@@ -101,82 +145,98 @@ export default function LeadsPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="py-3 px-4 w-12"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" /></th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Lead Name</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact Details</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Source</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Lead Score</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created At</th>
-                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {leadsData.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-3 px-4"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" /></td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <img src={lead.avatar} alt="" className="w-8 h-8 rounded-full bg-slate-200" />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{lead.name}</p>
-                        <p className="text-[11px] text-slate-500">{lead.company}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <p className="text-xs text-slate-700 font-medium flex items-center gap-1.5"><span className="text-slate-400">📞</span> {lead.phone}</p>
-                    <p className="text-xs text-blue-600 flex items-center gap-1.5"><span className="text-slate-400">✉️</span> {lead.email}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-base ${lead.sourceColor}`}>●</span>
-                      <span className="text-xs font-medium text-slate-700">{lead.source}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`text-sm font-bold ${lead.scoreColor}`}>{lead.score}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${lead.statusColor}`}>{lead.status}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <img src={lead.assigneeAvatar} alt="" className="w-5 h-5 rounded-full bg-slate-200" />
-                      <span className="text-xs font-medium text-slate-700">{lead.assigned}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-xs text-slate-500 font-medium">{lead.time}</td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex justify-end gap-2 text-slate-400">
-                      <button className="hover:text-blue-600"><HiOutlineMagnifyingGlass className="w-4 h-4" /></button>
-                      <button className="hover:text-blue-600">✏️</button>
-                      <button className="hover:text-blue-600">⋮</button>
-                    </div>
-                  </td>
+          {loading ? (
+            <div className="p-8 text-center text-slate-500 font-medium">Loading leads...</div>
+          ) : error ? (
+            <div className="p-8 text-center text-red-500 font-medium">{error}</div>
+          ) : leads.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 font-medium">No leads found. Create one to get started!</div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="py-3 px-4 w-12"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" /></th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Lead Name</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact Details</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Source</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Score</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {leads.map((lead) => (
+                  <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3 px-4"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" /></td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
+                          {lead.fullName.substring(0, 2)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{lead.fullName}</p>
+                          <p className="text-[11px] text-slate-500">{lead.companyName || 'No Company'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="text-xs text-slate-700 font-medium flex items-center gap-1.5"><span className="text-slate-400">📞</span> {lead.phone || 'N/A'}</p>
+                      <p className="text-xs text-blue-600 flex items-center gap-1.5"><span className="text-slate-400">✉️</span> {lead.email || 'N/A'}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base" style={{ color: lead.source?.color || '#94a3b8' }}>●</span>
+                        <span className="text-xs font-medium text-slate-700">{lead.source?.name || 'Direct'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`text-sm font-bold ${getScoreColor(lead.leadScore)}`}>{lead.leadScore}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${getStatusColor(lead.status)}`}>{lead.status}</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {lead.assignedTo ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[8px] font-bold uppercase">
+                            {lead.assignedTo.name.substring(0, 2)}
+                          </div>
+                          <span className="text-xs font-medium text-slate-700">{lead.assignedTo.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-xs text-slate-500 font-medium">
+                      {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex justify-end gap-2 text-slate-400">
+                        <button className="hover:text-blue-600"><HiOutlineMagnifyingGlass className="w-4 h-4" /></button>
+                        <button className="hover:text-blue-600">✏️</button>
+                        <button className="hover:text-blue-600">⋮</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         
         {/* Pagination */}
-        <div className="p-4 border-t border-slate-200 flex items-center justify-between">
-          <span className="text-xs text-slate-500">Showing 1 to 7 of 25,689 leads</span>
-          <div className="flex items-center gap-2">
-            <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 text-sm">&lt;</button>
-            <button className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 font-semibold text-sm">1</button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-sm">2</button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-sm">3</button>
-            <span className="text-slate-400">...</span>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-sm">100</button>
-            <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-sm">&gt;</button>
+        {!loading && leads.length > 0 && (
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-xs text-slate-500">Showing 1 to {leads.length} of {leads.length} leads</span>
+            <div className="flex items-center gap-2">
+              <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 text-sm">&lt;</button>
+              <button className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 font-semibold text-sm">1</button>
+              <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-sm">&gt;</button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
