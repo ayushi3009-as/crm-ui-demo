@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import {
   getLeads,
+  getDashboardStats,
   getLeadById,
   createLead,
   updateLead,
@@ -18,6 +19,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', getLeads);
+router.get('/stats', getDashboardStats);
 router.get('/:id', getLeadById);
 
 router.post(

@@ -461,3 +461,42 @@ export const assignLead = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getDashboardStats = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+    
+    const [
+      totalLeads, totalLeadsLast30,
+      newLeads, newLeadsLast30,
+      contactedLeads, contactedLeadsLast30,
+      qualifiedLeads, qualifiedLeadsLast30,
+      wonLeads, wonLeadsLast30
+    ] = await Promise.all([
+      prisma.lead.count(),
+      prisma.lead.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.lead.count({ where: { status: 'NEW' } }),
+      prisma.lead.count({ where: { status: 'NEW', createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.lead.count({ where: { status: 'CONTACTED' } }),
+      prisma.lead.count({ where: { status: 'CONTACTED', createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.lead.count({ where: { status: 'QUALIFIED' } }),
+      prisma.lead.count({ where: { status: 'QUALIFIED', createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.lead.count({ where: { status: 'WON' } }),
+      prisma.lead.count({ where: { status: 'WON', createdAt: { gte: thirtyDaysAgo } } })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        total: { count: totalLeads, last30: totalLeadsLast30 },
+        new: { count: newLeads, last30: newLeadsLast30 },
+        contacted: { count: contactedLeads, last30: contactedLeadsLast30 },
+        qualified: { count: qualifiedLeads, last30: qualifiedLeadsLast30 },
+        won: { count: wonLeads, last30: wonLeadsLast30 }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

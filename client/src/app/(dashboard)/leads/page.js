@@ -16,6 +16,7 @@ import EditLeadModal from '@/components/leads/EditLeadModal';
 export default function LeadsPage() {
   const { user } = useAuth();
   const [leads, setLeads] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -29,13 +30,7 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('all_time');
-
-  // Stats calculation
-  const totalLeads = leads.length;
-  const newLeads = leads.filter(l => l.status === 'NEW').length;
-  const contactedLeads = leads.filter(l => l.status === 'CONTACTED').length;
-  const qualifiedLeads = leads.filter(l => l.status === 'QUALIFIED').length;
-  const wonLeads = leads.filter(l => l.status === 'WON').length;
+  const [cardFilter, setCardFilter] = useState('');
 
   const tabs = ['All Leads', 'My Leads', 'New Leads', 'Qualified'];
   const dateOptions = [
@@ -64,7 +59,9 @@ export default function LeadsPage() {
       if (debouncedSearch) queryParams.append('search', debouncedSearch);
       if (dateFilter && dateFilter !== 'all_time') queryParams.append('dateFilter', dateFilter);
       
-      if (activeTab === 'My Leads' && user?.id) {
+      if (cardFilter) {
+        queryParams.append('status', cardFilter);
+      } else if (activeTab === 'My Leads' && user?.id) {
         queryParams.append('assignedToId', user.id);
       } else if (activeTab === 'New Leads') {
         queryParams.append('status', 'NEW');
@@ -90,9 +87,23 @@ export default function LeadsPage() {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/leads/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setStats(data.data);
+    } catch (err) {
+      console.error('Failed to fetch stats', err);
+    }
+  };
+
   useEffect(() => {
     fetchLeads();
-  }, [activeTab, debouncedSearch, user?.id, dateFilter]);
+    fetchStats();
+  }, [activeTab, debouncedSearch, user?.id, dateFilter, cardFilter]);
 
   const handleExport = () => {
     if (!leads.length) return;
@@ -177,24 +188,29 @@ export default function LeadsPage() {
       {/* Top Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard 
-          title="Total Leads" value={totalLeads.toString()} change="+" changeType="increase" 
+          title="Total Leads" value={stats?.total?.count?.toString() || '0'} change={stats?.total?.last30?.toString() || '0'} changeType="increase" 
           icon={HiOutlineUsers} iconBg="bg-blue-100" iconColor="text-blue-600" 
+          onClick={() => setCardFilter(cardFilter === '' ? '' : '')} isActive={cardFilter === ''}
         />
         <StatCard 
-          title="New Leads" value={newLeads.toString()} change="+" changeType="increase" 
+          title="New Leads" value={stats?.new?.count?.toString() || '0'} change={stats?.new?.last30?.toString() || '0'} changeType="increase" 
           icon={HiOutlineUserPlus} iconBg="bg-emerald-100" iconColor="text-emerald-600" 
+          onClick={() => setCardFilter(cardFilter === 'NEW' ? '' : 'NEW')} isActive={cardFilter === 'NEW'}
         />
         <StatCard 
-          title="Contacted" value={contactedLeads.toString()} change="+" changeType="increase" 
+          title="Contacted" value={stats?.contacted?.count?.toString() || '0'} change={stats?.contacted?.last30?.toString() || '0'} changeType="increase" 
           icon={HiOutlineEnvelope} iconBg="bg-blue-100" iconColor="text-blue-600" 
+          onClick={() => setCardFilter(cardFilter === 'CONTACTED' ? '' : 'CONTACTED')} isActive={cardFilter === 'CONTACTED'}
         />
         <StatCard 
-          title="Qualified" value={qualifiedLeads.toString()} change="+" changeType="increase" 
+          title="Qualified" value={stats?.qualified?.count?.toString() || '0'} change={stats?.qualified?.last30?.toString() || '0'} changeType="increase" 
           icon={HiOutlineCheckCircle} iconBg="bg-orange-100" iconColor="text-orange-600" 
+          onClick={() => setCardFilter(cardFilter === 'QUALIFIED' ? '' : 'QUALIFIED')} isActive={cardFilter === 'QUALIFIED'}
         />
         <StatCard 
-          title="Converted" value={wonLeads.toString()} change="+" changeType="increase" 
+          title="Converted" value={stats?.won?.count?.toString() || '0'} change={stats?.won?.last30?.toString() || '0'} changeType="increase" 
           icon={HiOutlineFunnel} iconBg="bg-teal-100" iconColor="text-teal-600" 
+          onClick={() => setCardFilter(cardFilter === 'WON' ? '' : 'WON')} isActive={cardFilter === 'WON'}
         />
       </div>
 
@@ -207,8 +223,8 @@ export default function LeadsPage() {
             {tabs.map((tab, i) => (
               <button 
                 key={i} 
-                onClick={() => setActiveTab(tab)}
-                className={`whitespace-nowrap pb-3 pt-2 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                onClick={() => { setActiveTab(tab); setCardFilter(''); }}
+                className={`whitespace-nowrap pb-3 pt-2 text-sm font-semibold border-b-2 transition-colors ${activeTab === tab && !cardFilter ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
               >
                 {tab}
               </button>

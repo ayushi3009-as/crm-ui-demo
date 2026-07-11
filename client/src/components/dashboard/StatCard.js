@@ -1,8 +1,11 @@
-export default function StatCard({ title, value, change, changeType, icon: Icon, iconBg, iconColor, subtitle }) {
+export default function StatCard({ title, value, change, changeType, icon: Icon, iconBg, iconColor, subtitle, onClick, isActive }) {
   const isPositive = changeType === 'increase';
   
   return (
-    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <div 
+      onClick={onClick}
+      className={`bg-white rounded-2xl p-5 border shadow-sm flex flex-col justify-between transition-colors ${onClick ? 'cursor-pointer hover:border-blue-400 hover:shadow-md' : ''} ${isActive ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/20' : 'border-slate-200'}`}
+    >
       <div className="flex items-center gap-4 mb-4">
         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${iconBg}`}>
           <Icon className={`w-6 h-6 ${iconColor}`} />
