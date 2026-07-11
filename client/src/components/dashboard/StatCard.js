@@ -7,9 +7,9 @@ export default function StatCard({ title, value, change, changeType, icon: Icon,
         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${iconBg}`}>
           <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
-        <div>
-          <h3 className="text-sm font-medium text-slate-500">{title}</h3>
-          <p className="text-2xl font-bold text-slate-900 mt-0.5">{value}</p>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-medium text-slate-500 truncate">{title}</h3>
+          <p className="text-xl 2xl:text-2xl font-bold text-slate-900 mt-0.5 truncate" title={value}>{value}</p>
         </div>
       </div>
       <div className="flex items-center text-xs font-medium">
