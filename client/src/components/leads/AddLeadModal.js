@@ -149,6 +149,19 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess, defaultAssign
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Initial Status</label>
+                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
+                  <option value="NEW">New</option>
+                  <option value="CONTACTED">Contacted</option>
+                  <option value="QUALIFIED">Qualified</option>
+                  <option value="PROPOSAL">Proposal Sent</option>
+                  <option value="NEGOTIATION">Negotiation</option>
+                  <option value="WON">Won (Completed)</option>
+                  <option value="LOST">Lost</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Lead Source</label>
                 <input 
                   list="source-options" 

@@ -8,6 +8,8 @@ export const getLeads = async (req, res, next) => {
       sourceId,
       assignedToId,
       dateFilter,
+      minScore,
+      maxScore,
       sortBy = 'createdAt',
       sortOrder = 'desc',
       page = 1,
@@ -39,6 +41,12 @@ export const getLeads = async (req, res, next) => {
 
     if (assignedToId) {
       where.assignedToId = assignedToId;
+    }
+
+    if (minScore || maxScore) {
+      where.leadScore = {};
+      if (minScore) where.leadScore.gte = parseInt(minScore);
+      if (maxScore) where.leadScore.lte = parseInt(maxScore);
     }
 
     if (dateFilter) {

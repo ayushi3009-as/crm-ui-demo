@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import AddLeadModal from '@/components/leads/AddLeadModal';
 import ImportLeadsModal from '@/components/leads/ImportLeadsModal';
 import EditLeadModal from '@/components/leads/EditLeadModal';
+import FilterLeadsModal from '@/components/leads/FilterLeadsModal';
 
 export default function LeadsPage() {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ export default function LeadsPage() {
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [editLead, setEditLead] = useState(null);
 
   // Filters
@@ -31,6 +33,7 @@ export default function LeadsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('all_time');
   const [cardFilter, setCardFilter] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState({});
 
   const tabs = ['All Leads', 'My Leads', 'New Leads', 'Qualified'];
   const dateOptions = [
@@ -59,7 +62,13 @@ export default function LeadsPage() {
       if (debouncedSearch) queryParams.append('search', debouncedSearch);
       if (dateFilter && dateFilter !== 'all_time') queryParams.append('dateFilter', dateFilter);
       
-      if (cardFilter) {
+      // Advanced Filters
+      if (advancedFilters.status) queryParams.append('status', advancedFilters.status);
+      if (advancedFilters.sourceId) queryParams.append('sourceId', advancedFilters.sourceId);
+      if (advancedFilters.minScore) queryParams.append('minScore', advancedFilters.minScore);
+      if (advancedFilters.maxScore) queryParams.append('maxScore', advancedFilters.maxScore);
+
+      if (cardFilter && !advancedFilters.status) {
         queryParams.append('status', cardFilter);
       } else if (activeTab === 'My Leads' && user?.id) {
         queryParams.append('assignedToId', user.id);
@@ -103,7 +112,7 @@ export default function LeadsPage() {
   useEffect(() => {
     fetchLeads();
     fetchStats();
-  }, [activeTab, debouncedSearch, user?.id, dateFilter, cardFilter]);
+  }, [activeTab, debouncedSearch, user?.id, dateFilter, cardFilter, advancedFilters]);
 
   const handleExport = () => {
     if (!leads.length) return;
@@ -160,6 +169,7 @@ export default function LeadsPage() {
       <AddLeadModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchLeads} defaultAssignee={activeTab === 'My Leads' ? user?.id : null} />
       <ImportLeadsModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} onSuccess={fetchLeads} />
       <EditLeadModal isOpen={!!editLead} lead={editLead} onClose={() => setEditLead(null)} onSuccess={fetchLeads} />
+      <FilterLeadsModal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} onApply={setAdvancedFilters} currentFilters={advancedFilters} />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -241,8 +251,8 @@ export default function LeadsPage() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors">
-              <HiOutlineAdjustmentsHorizontal className="w-4 h-4" /> Filter
+            <button onClick={() => setIsFilterOpen(true)} className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-xs font-semibold transition-colors ${Object.values(advancedFilters).some(v => v) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+              <HiOutlineAdjustmentsHorizontal className="w-4 h-4" /> Filter {Object.values(advancedFilters).some(v => v) && '•'}
             </button>
             <div className="relative">
               <HiOutlineMagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
