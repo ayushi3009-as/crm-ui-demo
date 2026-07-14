@@ -4,7 +4,8 @@ import {
   HiOutlineUsers, HiOutlineUserPlus, HiOutlineEnvelope, 
   HiOutlineCheckCircle, HiOutlineFunnel, HiOutlineArrowDownTray,
   HiOutlineArrowUpTray, HiOutlinePlus, HiOutlineAdjustmentsHorizontal,
-  HiOutlineMagnifyingGlass, HiOutlinePencilSquare
+  HiOutlineMagnifyingGlass, HiOutlinePencilSquare, HiOutlineListBullet,
+  HiOutlineViewColumns
 } from 'react-icons/hi2';
 import StatCard from '@/components/dashboard/StatCard';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,6 +14,7 @@ import AddLeadModal from '@/components/leads/AddLeadModal';
 import ImportLeadsModal from '@/components/leads/ImportLeadsModal';
 import EditLeadModal from '@/components/leads/EditLeadModal';
 import FilterLeadsModal from '@/components/leads/FilterLeadsModal';
+import KanbanBoard from '@/components/leads/KanbanBoard';
 
 export default function LeadsPage() {
   const { user } = useAuth();
@@ -27,8 +29,9 @@ export default function LeadsPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [editLead, setEditLead] = useState(null);
 
-  // Filters
+  // Filters & Views
   const [activeTab, setActiveTab] = useState('All Leads');
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'board'
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('all_time');
@@ -240,8 +243,17 @@ export default function LeadsPage() {
               </button>
             ))}
           </div>
-          {/* Filters */}
+          {/* Filters & View Toggle */}
           <div className="flex items-center gap-3 pb-3 xl:pb-0">
+            {/* View Toggle */}
+            <div className="flex items-center bg-slate-100 rounded-lg p-1 mr-2 border border-slate-200">
+              <button onClick={() => setViewMode('table')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                <HiOutlineListBullet className="w-4 h-4" />
+              </button>
+              <button onClick={() => setViewMode('board')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'board' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                <HiOutlineViewColumns className="w-4 h-4" />
+              </button>
+            </div>
             <select 
               value={dateFilter} 
               onChange={e => setDateFilter(e.target.value)}
@@ -267,16 +279,29 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="p-8 text-center text-slate-500 font-medium">Loading leads...</div>
-          ) : error ? (
-            <div className="p-8 text-center text-red-500 font-medium">{error}</div>
-          ) : leads.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 font-medium">No leads found. Create one to get started!</div>
-          ) : (
-            <table className="w-full text-left border-collapse">
+        {/* Content (Table or Board) */}
+        {viewMode === 'board' ? (
+          <div className="p-5 bg-slate-50 min-h-[600px]">
+            {loading ? (
+              <div className="p-8 text-center text-slate-500 font-medium">Loading board...</div>
+            ) : error ? (
+              <div className="p-8 text-center text-red-500 font-medium">{error}</div>
+            ) : leads.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 font-medium">No leads found. Create one to get started!</div>
+            ) : (
+              <KanbanBoard leads={leads} onStatusChange={fetchLeads} />
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="p-8 text-center text-slate-500 font-medium">Loading leads...</div>
+            ) : error ? (
+              <div className="p-8 text-center text-red-500 font-medium">{error}</div>
+            ) : leads.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 font-medium">No leads found. Create one to get started!</div>
+            ) : (
+              <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="py-3 px-4 w-12"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" /></th>
@@ -351,9 +376,10 @@ export default function LeadsPage() {
             </table>
           )}
         </div>
+        )}
         
-        {/* Pagination */}
-        {!loading && leads.length > 0 && (
+        {/* Pagination (Only show in table view) */}
+        {!loading && leads.length > 0 && viewMode === 'table' && (
           <div className="p-4 border-t border-slate-200 flex items-center justify-between mt-auto">
             <span className="text-xs text-slate-500">Showing 1 to {leads.length} of {leads.length} leads</span>
             <div className="flex items-center gap-2">
