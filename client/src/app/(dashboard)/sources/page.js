@@ -6,20 +6,35 @@ import {
 import StatCard from '@/components/dashboard/StatCard';
 import LeadSourcesChart from '@/components/dashboard/LeadSourcesChart';
 
-const sourcesData = [
-  { id: 1, name: 'Google Ads', type: 'Digital Ads', total: '4,562', qualified: '1,256', converted: '632', rate: '13.85%', status: 'Connected', color: 'text-blue-500' },
-  { id: 2, name: 'Meta Ads', type: 'Digital Ads', total: '3,589', qualified: '945', converted: '512', rate: '14.27%', status: 'Connected', color: 'text-blue-600' },
-  { id: 3, name: 'WhatsApp Campaigns', type: 'Communication', total: '3,256', qualified: '965', converted: '589', rate: '18.08%', status: 'Connected', color: 'text-green-500' },
-  { id: 4, name: 'Website Forms', type: 'Website', total: '2,987', qualified: '854', converted: '425', rate: '14.23%', status: 'Connected', color: 'text-indigo-500' },
-  { id: 5, name: 'IndiaMART Leads', type: 'Marketplace', total: '2,562', qualified: '632', converted: '312', rate: '12.18%', status: 'Connected', color: 'text-red-500' },
-  { id: 6, name: 'Justdial Leads', type: 'Directory', total: '1,985', qualified: '456', converted: '198', rate: '9.97%', status: 'Connected', color: 'text-orange-500' },
-  { id: 7, name: 'Email Campaigns', type: 'Communication', total: '1,856', qualified: '632', converted: '301', rate: '16.24%', status: 'Connected', color: 'text-blue-400' },
-  { id: 8, name: 'Telecalling', type: 'Offline', total: '1,256', qualified: '325', converted: '125', rate: '9.96%', status: 'Connected', color: 'text-slate-600' },
-  { id: 9, name: 'Referral Leads', type: 'Offline', total: '1,125', qualified: '478', converted: '256', rate: '22.76%', status: 'Connected', color: 'text-emerald-500' },
-  { id: 10, name: 'Landing Pages', type: 'Website', total: '895', qualified: '325', converted: '145', rate: '16.20%', status: 'Connected', color: 'text-orange-400' },
-];
+import { useState, useEffect } from 'react';
 
 export default function SourcesPage() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/sources/dashboard/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      } else {
+        setError(json.message);
+      }
+    } catch (err) {
+      setError('Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       
@@ -45,34 +60,40 @@ export default function SourcesPage() {
         {/* Left main area */}
         <div className="lg:col-span-3 space-y-6">
           
-          {/* Stat Cards */}
-          <div className="grid grid-cols-5 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-              <p className="text-[11px] font-semibold text-slate-500">Total Sources</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">25+</p>
-              <p className="text-[10px] text-slate-400 mt-1">Connected</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-              <p className="text-[11px] font-semibold text-slate-500">Total Leads</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">25,689</p>
-              <p className="text-[10px] text-emerald-500 mt-1">↑ 18.6% vs last 30 days</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-              <p className="text-[11px] font-semibold text-slate-500">Qualified Leads</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">5,689</p>
-              <p className="text-[10px] text-emerald-500 mt-1">↑ 22.7% vs last 30 days</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-              <p className="text-[11px] font-semibold text-slate-500">Converted Leads</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">2,743</p>
-              <p className="text-[10px] text-emerald-500 mt-1">↑ 28.4% vs last 30 days</p>
-            </div>
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-              <p className="text-[11px] font-semibold text-slate-500">Avg. Lead Score</p>
-              <p className="text-xl font-bold text-slate-900 mt-1">78</p>
-              <p className="text-[10px] text-emerald-600 font-semibold mt-1">High Quality</p>
-            </div>
-          </div>
+          {loading ? (
+            <div className="p-10 text-center text-slate-500 font-medium">Loading live analytics...</div>
+          ) : error ? (
+            <div className="p-10 text-center text-red-500 font-medium">{error}</div>
+          ) : data ? (
+            <>
+              {/* Stat Cards */}
+              <div className="grid grid-cols-5 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                  <p className="text-[11px] font-semibold text-slate-500">Total Sources</p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{data.aggregates.totalSources}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Connected</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                  <p className="text-[11px] font-semibold text-slate-500">Total Leads</p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{data.aggregates.totalLeads.count}</p>
+                  <p className="text-[10px] text-emerald-500 mt-1">↑ {data.aggregates.totalLeads.last30} vs last 30 days</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                  <p className="text-[11px] font-semibold text-slate-500">Qualified Leads</p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{data.aggregates.qualifiedLeads.count}</p>
+                  <p className="text-[10px] text-emerald-500 mt-1">↑ {data.aggregates.qualifiedLeads.last30} vs last 30 days</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                  <p className="text-[11px] font-semibold text-slate-500">Converted Leads</p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{data.aggregates.convertedLeads.count}</p>
+                  <p className="text-[10px] text-emerald-500 mt-1">↑ {data.aggregates.convertedLeads.last30} vs last 30 days</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                  <p className="text-[11px] font-semibold text-slate-500">Avg. Lead Score</p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{data.aggregates.avgScore}</p>
+                  <p className="text-[10px] text-emerald-600 font-semibold mt-1">Quality Score</p>
+                </div>
+              </div>
 
           {/* Table */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -90,25 +111,31 @@ export default function SourcesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sourcesData.map((src) => (
-                  <tr key={src.id} className="hover:bg-slate-50/50">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xl ${src.color}`}>●</span>
-                        <span className="text-xs font-semibold text-slate-800">{src.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-500">{src.type}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.total}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.qualified}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.converted}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.rate}</td>
-                    <td className="py-3 px-4">
-                      <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">{src.status}</span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-400 cursor-pointer hover:text-slate-700">⋮</td>
+                {data.sourcesList.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="py-8 text-center text-slate-500 text-sm">No lead sources found.</td>
                   </tr>
-                ))}
+                ) : (
+                  data.sourcesList.map((src) => (
+                    <tr key={src.id} className="hover:bg-slate-50/50">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xl ${src.color}`}>●</span>
+                          <span className="text-xs font-semibold text-slate-800">{src.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-xs text-slate-500">{src.type}</td>
+                      <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.total}</td>
+                      <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.qualified}</td>
+                      <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.converted}</td>
+                      <td className="py-3 px-4 text-xs font-semibold text-slate-700 text-right">{src.rate}</td>
+                      <td className="py-3 px-4">
+                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">{src.status}</span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-400 cursor-pointer hover:text-slate-700">⋮</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -118,13 +145,13 @@ export default function SourcesPage() {
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
               <h4 className="text-xs font-semibold text-slate-800 mb-4 w-full text-center">Leads by Source</h4>
               <div className="w-24 h-24 rounded-full border-8 border-blue-500 border-r-emerald-500 border-b-orange-500 border-l-purple-500 flex items-center justify-center relative">
-                <span className="text-[10px] font-bold absolute">25,689</span>
+                <span className="text-[10px] font-bold absolute">{data.aggregates.totalLeads.count}</span>
               </div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
               <h4 className="text-xs font-semibold text-slate-800 mb-4 w-full text-center">Lead Quality Distribution</h4>
               <div className="w-24 h-24 rounded-full border-8 border-emerald-500 border-r-yellow-400 border-b-yellow-400 border-l-blue-400 flex items-center justify-center relative">
-                <span className="text-[10px] font-bold absolute">25,689</span>
+                <span className="text-[10px] font-bold absolute">{data.aggregates.totalLeads.count}</span>
               </div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
@@ -139,17 +166,23 @@ export default function SourcesPage() {
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
               <h4 className="text-xs font-semibold text-slate-800 mb-4 text-center">Top Performing Sources</h4>
               <div className="space-y-3">
-                {['Google Ads', 'WhatsApp', 'Referral Leads'].map((n, i) => (
+                {data.topPerforming.map((src, i) => (
                   <div key={i} className="flex justify-between items-center text-[10px]">
-                    <span className="text-slate-600 font-medium">{n}</span>
-                    <div className="w-1/2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 w-3/4"></div>
+                    <span className="text-slate-600 font-medium truncate max-w-[80px]" title={src.name}>{src.name}</span>
+                    <div className="flex-1 mx-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500" style={{ width: `${Math.min(src.rate, 100)}%` }}></div>
                     </div>
+                    <span className="text-slate-500 font-medium">{src.rate.toFixed(1)}%</span>
                   </div>
                 ))}
+                {data.topPerforming.length === 0 && (
+                  <div className="text-center text-[10px] text-slate-400 py-2">Not enough data</div>
+                )}
               </div>
             </div>
           </div>
+            </>
+          ) : null}
 
         </div>
 
